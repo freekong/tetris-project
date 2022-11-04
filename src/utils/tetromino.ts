@@ -289,3 +289,28 @@ export function mapTetrominoT(row: number, col: number, direction: number) {
   }
   return changedMapArray
 }
+
+/**
+ * @description: 判断是否可以移动
+ * @param { String } type [判断左边界还是有边界]
+ * @return void 
+ */
+export function moveable (type: String, changedMapArray: Array<coord>) {
+  let moveBool: boolean = true
+  for (let i = 0; i < changedMapArray.length; i++) {
+    const item = changedMapArray[i];
+    if (type === 'left') {
+      if (item.col <= 0 ) {
+        moveBool = false
+        break
+      }
+    } else {
+      if (item.col >= 9) {
+        moveBool = false
+        break
+      }
+    }
+  }
+
+  return moveBool
+}
