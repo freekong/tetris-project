@@ -2,7 +2,7 @@
 import mainView from "./components/mainView.vue";
 import operation from "./components/operation.vue";
 import next from "./components/next.vue";
-import timer from "./components/timer.vue";
+import grade from "./components/grade.vue";
 </script>
 
 <template>
@@ -13,7 +13,7 @@ import timer from "./components/timer.vue";
     </div>
     <div class="aside">
       <next />
-      <timer />
+      <grade />
     </div>
   </div>
 </template>

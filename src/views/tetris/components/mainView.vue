@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { onMounted } from 'vue'
-import { generateRandom } from '@/utils/tool'
+import { reactive, ref, onMounted } from 'vue'
 import emitter from '@/utils/bus'
+import { useGradeStore } from '@/store/grade'
+import { useTetrominoStore } from '@/store/tetrominoInfo'
 import { coord, mapTetrominoI, mapTetrominoL, mapTetrominoJ, mapTetrominoO, mapTetrominoS, mapTetrominoZ, mapTetrominoT, moveable } from '@/utils/tetromino'
 
 interface tetromino {
@@ -35,8 +35,8 @@ const beforeTetromino = ref<tetromino>({
 })
 const dropEnd = ref<boolean>(true)
 let changedMapArray = reactive<Array<coord>>([])
-const grade = ref<number>(0)
-const tetrominoArray: Array<String> = ['I', 'L', 'J', 'O', 'S', 'Z', 'T']
+const gradeStore = useGradeStore()
+const tetrominoStore = useTetrominoStore()
 let runTimer: NodeJS.Timeout | null = null
 const defaultRow: Array<Number> = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 let tetrisCanvas: any;
@@ -44,6 +44,7 @@ let tetrisCanvasCtx: any;
 
 
 const run = () => {
+  gradeStore.increment()
   runTimer = setInterval(() => {
     dropTetromino()
   }, 1000)
@@ -56,7 +57,7 @@ const stop = () => {
 
 const moveLeft = () => {
   if (!moveable('left', changedMapArray)) {
-    console.log('[ 到边界了，无法移动 ] >')
+    console.log('[ 到左边界了，无法移动 ] >')
     return
   }
   dropEnd.value = false
@@ -69,7 +70,7 @@ const moveLeft = () => {
 
 const moveRight = () => {
   if (!moveable('right', changedMapArray)) {
-    console.log('[ 到边界了，无法移动 ] >')
+    console.log('[ 到右边界了，无法移动 ] >')
     return
   }
   dropEnd.value = false
@@ -96,31 +97,33 @@ const clockWise = () => {
 const antiClockwise = () => {
   dropEnd.value = false
   clearBefore()
-  let { coord, type, direction } = currentTetromino.value
-  if (direction === 1) {
-    direction = 4
+  if (currentTetromino.value.direction === 1) {
+    currentTetromino.value.direction = 4
   } else {
-    direction --
+    currentTetromino.value.direction --
   }
+  let { coord, type, direction } = currentTetromino.value
   tetrominoMapArray(type, coord, direction, 1)
   drawTetris()
 }
 
 /**
  * @description: 创建一个随机的块
- * @return {*}
+ * @return void
  */
 const createTetromino = () => {
-  const num: number = generateRandom()
-  console.log('[ num ] >', num)
   dropEnd.value = false
-  currentTetromino.value.type = tetrominoArray[num]
-  currentTetromino.value.direction = 1
+  tetrominoStore.exchangeCurrent()
+  const { type, direction } = tetrominoStore.tetrominoInfo.current
+  currentTetromino.value.type = type
+  currentTetromino.value.direction = direction
   currentTetromino.value.coord = {
     row: -3,
     col: 4
   }
-  const { coord, type, direction } = currentTetromino.value
+  const { coord } = currentTetromino.value
+  tetrominoStore.updateNext()
+  emitter.emit('onUpdateNext')
   tetrominoMapArray(type, coord, direction, 1)
   drawTetris()
 
@@ -140,7 +143,7 @@ const dropTetromino = () => {
 
 /**
  * @description: 清除映射数组中上一次的块的信息
- * @return {*}
+ * @return void 
  */
 const clearBefore = () => {
   const { coord, type, direction } = beforeTetromino.value
@@ -149,15 +152,14 @@ const clearBefore = () => {
 
 /**
  * @description: 将块映射到数组中
- * @param {*} type [块的类型]
- * @param {*} currentTetrominoCoord [当前块的每个位置的行列数据]
- * @param {*} direction [方向：顺时针1，2，3，4 对应 上，右，下，左]
- * @param {number} lightState [当前块在映射数组中映射成 1 还是 0]
- * @return {*}
+ * @param { string } type [块的类型]
+ * @param { coord } currentTetrominoCoord [当前块的每个位置的行列数据]
+ * @param { number } direction [方向：顺时针1，2，3，4 对应 上，右，下，左]
+ * @param { number } lightState [当前块在映射数组中映射成 1 还是 0]
+ * @return void
  */
 const tetrominoMapArray = (type: String, currentTetrominoCoord: coord, direction: number, lightState: number) => {
   
-  // let changedMapArray: Array<coord> = []
   const { row, col } = currentTetrominoCoord
   switch (type) {
     case 'I':
@@ -199,7 +201,7 @@ const tetrominoMapArray = (type: String, currentTetrominoCoord: coord, direction
 
 /**
  * @description: 判断下落的块的位置是否到底
- * @return {*}
+ * @return void
  */
 const judgeTetromino = (changedMapArray: Array<coord> = [], lightState: number) => {
   let flag: boolean = true
@@ -246,14 +248,14 @@ const removeFullCol = () => {
       // 将当前行移除同时在顶部新增一行
       mapArray.value.splice(i, 1)
       mapArray.value.unshift(defaultRow)
-      grade.value += 100
+      gradeStore.increment()
     }
   }
 }
 
 /**
  * @description: 根据mapArray绘制画面，数组中对应的为 1 则渲染，为 0 则不渲染
- * @return {*}
+ * @return void
  */
 const drawTetris = () => {
   console.log('[ mapArray ] >', mapArray)
@@ -273,7 +275,7 @@ const drawTetris = () => {
 
 /**
  * @description: 清除画布
- * @return {*}
+ * @return void
  */
 const clearCanvas = () => {
   tetrisCanvasCtx.clearRect(0, 0, width.value, height.value);
@@ -281,13 +283,13 @@ const clearCanvas = () => {
 
 /**
  * @description: 重置
- * @return {*}
+ * @return void
  */
 const reset = () => {
   stop()
   clearCanvas()
   initMapArray()
-  grade.value = 0
+  gradeStore.reset()
 }
 
 const initMapArray = () => {
@@ -301,7 +303,7 @@ const initMapArray = () => {
 
 /**
  * @description: 注册事件
- * @return {*}
+ * @return void
  */
 const registerEvent = () => {
   // 左移事件
@@ -355,6 +357,8 @@ onMounted(() => {
   tetrisCanvasCtx = tetrisCanvas.getContext("2d")
   width.value = tetrisCanvas.width
   height.value = tetrisCanvas.height
+  tetrominoStore.updateNext()
+  emitter.emit('onUpdateNext')
   initMapArray()
   // 注册事件
   registerEvent()

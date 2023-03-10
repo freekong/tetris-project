@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { useGradeStore } from '@/store/grade'
 
+const gradeStore = useGradeStore()
 
 </script>
 
 <template>
-  <div class="timer-box">
-    <span>00:00</span>
+  <div class="grade-box">
+    <span>{{ gradeStore.grade }}</span>
   </div>
 </template>
 
 <style lang="scss" scoped>
 @import '@/style/variables.scss';
-.timer-box {
+.grade-box {
   width: 200px;
   height: 60px;
   background: $viewBg;
